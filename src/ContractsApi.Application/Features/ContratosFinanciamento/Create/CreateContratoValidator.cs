@@ -8,7 +8,7 @@ public class CreateContratoValidator : AbstractValidator<CreateContratoCommand>
     {
         RuleFor(x => x.ClienteCpfCnpj)
             .NotEmpty().WithMessage("CPF/CNPJ é obrigatório")
-            .Matches(@"^\d{11}$|^\d{14}$").WithMessage("CPF deve ter 11 dígitos ou CNPJ 14 dígitos");
+            .SetValidator(new CpfCnpjValidator()).WithMessage("CPF ou CNPJ inválido");
 
         RuleFor(x => x.ValorTotal)
             .GreaterThan(0).WithMessage("Valor total deve ser maior que zero");
