@@ -1,0 +1,185 @@
+# .gitignore for ContractsApi - .NET 8 Application
+# Based on https://github.com/github/gitignore/blob/main/Dotnet.gitignore
+
+###################
+# Build results
+###################
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+###################
+# .NET Core
+###################
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+###################
+# ASP.NET Scaffolding
+###################
+ScaffoldingReadMe.txt
+
+###################
+# NuGet Packages
+###################
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+
+###################
+# Test Results
+###################
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.VisualState.xml
+TestResult.xml
+nunit-*.xml
+CodeCoverage/
+coverage/
+*.coverage
+*.coveragexml
+
+###################
+# MSBuild Binary and Structured Log
+###################
+*.binlog
+
+###################
+# Visual Studio / Rider
+###################
+/.vs
+.vs/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.idea/
+*.sln.iml
+.idea_modules/
+
+###################
+# MonoDevelop/Xamarin Studio
+###################
+*.userprefs
+
+###################
+# Temporary files
+###################
+~$*
+*~
+*.tmp
+*.temp
+*.bak
+*.swp
+*~.nib
+
+###################
+# Logs (Serilog)
+###################
+logs/
+*.log
+log-*.txt
+serilog-*.log
+
+###################
+# Docker
+###################
+docker-compose.override.yml
+*.dockerignore
+
+###################
+# Database
+###################
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+###################
+# Environment / Secrets
+###################
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+*.pfx
+*.p12
+
+###################
+# OS Files
+###################
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+###################
+# Node (if using npm for frontend)
+###################
+node_modules/
+npm-debug.log
+yarn-error.log
+
+###################
+# JetBrains Rider
+###################
+.idea/
+*.sln.iml
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+###################
+# Visual Studio Code
+###################
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+###################
+# Backup files
+###################
+*.bak
+*.orig
+*.swp
+
+###################
+# Publishing
+###################
+PublishProfiles/
+*.pubxml
+*.publishproj
+
+###################
+# Application specific
+###################
+# PostgreSQL data volume (Docker)
+postgres_data/
+
+# User uploads (if any)
+uploads/
+temp/
+
+# Generated documentation
+*.xml
+!src/**/*.xml
