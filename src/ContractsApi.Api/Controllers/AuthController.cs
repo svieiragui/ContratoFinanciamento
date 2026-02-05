@@ -1,9 +1,6 @@
-using ContractsApi.Api.Configuration;
+using ContractsApi.Application.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
 
 namespace ContractsApi.Api.Controllers;
 
@@ -11,12 +8,12 @@ namespace ContractsApi.Api.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly JwtSettings _jwtSettings;
+    private readonly IJwtTokenGenerator _jwtTokenGenerator;
     private readonly FixedUserSettings _userSettings;
 
-    public AuthController(IOptions<JwtSettings> jwtSettings, IOptions<FixedUserSettings> userSettings)
+    public AuthController(IJwtTokenGenerator jwtTokenGenerator, IOptions<FixedUserSettings> userSettings)
     {
-        _jwtSettings = jwtSettings.Value;
+        _jwtTokenGenerator = jwtTokenGenerator;
         _userSettings = userSettings.Value;
     }
 
@@ -28,24 +25,9 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid credentials" });
         }
 
-        var token = GenerateJwtToken(request.Username);
+        var token = _jwtTokenGenerator.GenerateToken(request.Username);
 
-        return Ok(new { token, expiresIn = _jwtSettings.ExpirationMinutes * 60 });
-    }
-
-    private string GenerateJwtToken(string username)
-    {
-        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.SecretKey));
-        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: _jwtSettings.Issuer,
-            audience: _jwtSettings.Audience,
-            expires: DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes),
-            signingCredentials: credentials
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return Ok(new { token, expiresIn = 3600 });
     }
 }
 

@@ -1,4 +1,4 @@
-using ContractsApi.Api.Configuration;
+using ContractsApi.Application.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -14,6 +14,8 @@ namespace ContractsApi.Api.Startup
 
             var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
                 ?? throw new InvalidOperationException("JWT settings not found.");
+
+            builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
             builder.Services.AddAuthentication(options =>
             {
