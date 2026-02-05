@@ -1,6 +1,7 @@
 ﻿using ContractsApi.Application.Features.ContratosFinanciamento.Create;
 using ContractsApi.Domain.Enums;
 using ContractsApi.IntegrationTests.Fixtures;
+using ContractsApi.IntegrationTests.Helpers;
 using FluentAssertions;
 using System.Net;
 using System.Net.Http.Json;
@@ -12,37 +13,6 @@ public class ClientesControllerTests : IntegrationTestFixture
 {
     public ClientesControllerTests() : base() { }
 
-    private async Task<Guid> CreateContratoAsync(string cpfCnpj, decimal valorTotal = 50000, int prazoMeses = 48)
-    {
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: cpfCnpj,
-            ValorTotal: valorTotal,
-            TaxaMensal: 2.5m,
-            PrazoMeses: prazoMeses,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
-
-        var response = await Client.PostAsJsonAsync("/api/contratos", command);
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        return result.GetProperty("data").GetProperty("id").GetGuid();
-    }
-
-    private async Task CreatePagamentoAsync(Guid contratoId, int numeroParcela, DateTime dataPagamento)
-    {
-        var pagamentoRequest = new
-        {
-            numeroParcela,
-            valorPago = 1346.18m,
-            dataPagamento
-        };
-
-        await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
-    }
-
     [Fact]
     public async Task GetResumoClienteWithoutContratos_ReturnsNotFound()
     {
@@ -53,7 +23,7 @@ public class ClientesControllerTests : IntegrationTestFixture
         var response = await Client.GetAsync($"/api/clientes/{cpfCnpj}/resumo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ResponseValidationHelper.ValidateNotFoundResponse(response.StatusCode);
     }
 
     [Fact]
@@ -61,25 +31,22 @@ public class ClientesControllerTests : IntegrationTestFixture
     {
         // Arrange
         var cpfCnpj = "28402173098";
-        await CreateContratoAsync(cpfCnpj, valorTotal: 50000, prazoMeses: 48);
+        await ContratoTestHelper.CreateContratoAsync(Client, cpfCnpj, valorTotal: 50000, prazoMeses: 48);
 
         // Act
         var response = await Client.GetAsync($"/api/clientes/{cpfCnpj}/resumo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        var data = result.GetProperty("data");
-
-        data.GetProperty("cpfCnpj").GetString().Should().Be(cpfCnpj);
-        data.GetProperty("quantidadeContratosAtivos").GetInt32().Should().Be(1);
-        data.GetProperty("totalParcelas").GetInt32().Should().Be(48);
-        data.GetProperty("parcelasPagas").GetInt32().Should().Be(0);
-        data.GetProperty("parcelasEmAtraso").GetInt32().Should().Be(0);
-        data.GetProperty("parcelasAVencer").GetInt32().Should().Be(48);
-        data.GetProperty("saldoDevedorConsolidado").GetDecimal().Should().Be(50000);
+        data.GetStringValue("cpfCnpj").Should().Be(cpfCnpj);
+        data.GetIntValue("quantidadeContratosAtivos").Should().Be(1);
+        data.GetIntValue("totalParcelas").Should().Be(48);
+        data.GetIntValue("parcelasPagas").Should().Be(0);
+        data.GetIntValue("parcelasEmAtraso").Should().Be(0);
+        data.GetIntValue("parcelasAVencer").Should().Be(48);
+        data.GetDecimalValue("saldoDevedorConsolidado").Should().Be(50000);
     }
 
     [Fact]
@@ -89,22 +56,19 @@ public class ClientesControllerTests : IntegrationTestFixture
         var cpfCnpj = "75592565038";
 
         // Criar 2 contratos
-        await CreateContratoAsync(cpfCnpj, valorTotal: 50000, prazoMeses: 48);
-        await CreateContratoAsync(cpfCnpj, valorTotal: 30000, prazoMeses: 36);
+        await ContratoTestHelper.CreateContratoAsync(Client, cpfCnpj, valorTotal: 50000, prazoMeses: 48);
+        await ContratoTestHelper.CreateContratoAsync(Client, cpfCnpj, valorTotal: 30000, prazoMeses: 36);
 
         // Act
         var response = await Client.GetAsync($"/api/clientes/{cpfCnpj}/resumo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        var data = result.GetProperty("data");
-
-        data.GetProperty("quantidadeContratosAtivos").GetInt32().Should().Be(2);
-        data.GetProperty("totalParcelas").GetInt32().Should().Be(84); // 48 + 36
-        data.GetProperty("saldoDevedorConsolidado").GetDecimal().Should().Be(80000); // 50000 + 30000
+        data.GetIntValue("quantidadeContratosAtivos").Should().Be(2);
+        data.GetIntValue("totalParcelas").Should().Be(84); // 48 + 36
+        data.GetDecimalValue("saldoDevedorConsolidado").Should().Be(80000); // 50000 + 30000
     }
 
     [Fact]
@@ -112,26 +76,21 @@ public class ClientesControllerTests : IntegrationTestFixture
     {
         // Arrange
         var cpfCnpj = "18182076056";
-        var contratoId = await CreateContratoAsync(cpfCnpj, valorTotal: 50000, prazoMeses: 12);
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client, cpfCnpj, valorTotal: 50000, prazoMeses: 12);
+        var dataVencimento = DateTime.Today.AddDays(30);
 
         // Criar 3 pagamentos em dia
-        var dataVencimento = DateTime.Today.AddDays(30);
-        await CreatePagamentoAsync(contratoId, 1, dataVencimento);
-        await CreatePagamentoAsync(contratoId, 2, dataVencimento.AddMonths(1));
-        await CreatePagamentoAsync(contratoId, 3, dataVencimento.AddMonths(2));
+        await PagamentoTestHelper.CreateMultiplePagamentosAsync(Client, contratoId, 3, dataVencimento);
 
         // Act
         var response = await Client.GetAsync($"/api/clientes/{cpfCnpj}/resumo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        var data = result.GetProperty("data");
-
-        data.GetProperty("parcelasPagas").GetInt32().Should().Be(3);
-        data.GetProperty("percentualParcelasPagasEmDia").GetDecimal().Should().Be(100); // Todas em dia
+        data.GetIntValue("parcelasPagas").Should().Be(3);
+        data.GetDecimalValue("percentualParcelasPagasEmDia").Should().Be(100); // Todas em dia
     }
 
     [Fact]
@@ -139,34 +98,30 @@ public class ClientesControllerTests : IntegrationTestFixture
     {
         // Arrange
         var cpfCnpj = "54237781070";
-        var contratoId = await CreateContratoAsync(cpfCnpj, valorTotal: 50000, prazoMeses: 12);
-
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client, cpfCnpj, valorTotal: 50000, prazoMeses: 12);
         var dataVencimento = DateTime.Today.AddDays(30);
 
         // 2 pagamentos em dia
-        await CreatePagamentoAsync(contratoId, 1, dataVencimento);
-        await CreatePagamentoAsync(contratoId, 2, dataVencimento.AddMonths(1));
+        await PagamentoTestHelper.CreatePagamentoAsync(Client, contratoId, 1, 1346.18m, dataVencimento);
+        await PagamentoTestHelper.CreatePagamentoAsync(Client, contratoId, 2, 1346.18m, dataVencimento.AddMonths(1));
 
         // 1 pagamento atrasado
-        await CreatePagamentoAsync(contratoId, 3, dataVencimento.AddMonths(3)); // Vencimento seria +2 meses
+        await PagamentoTestHelper.CreatePagamentoAsync(Client, contratoId, 3, 1346.18m, dataVencimento.AddMonths(3));
 
         // 1 pagamento antecipado
-        await CreatePagamentoAsync(contratoId, 4, dataVencimento.AddMonths(2)); // Vencimento seria +3 meses
+        await PagamentoTestHelper.CreatePagamentoAsync(Client, contratoId, 4, 1346.18m, dataVencimento.AddMonths(2));
 
         // Act
         var response = await Client.GetAsync($"/api/clientes/{cpfCnpj}/resumo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        var data = result.GetProperty("data");
-
-        data.GetProperty("parcelasPagas").GetInt32().Should().Be(4);
+        data.GetIntValue("parcelasPagas").Should().Be(4);
 
         // 2 em dia de 4 totais = 50%
-        var percentual = data.GetProperty("percentualParcelasPagasEmDia").GetDecimal();
+        var percentual = data.GetDecimalValue("percentualParcelasPagasEmDia");
         percentual.Should().BeGreaterThan(0);
         percentual.Should().BeLessThan(100);
     }
@@ -176,17 +131,12 @@ public class ClientesControllerTests : IntegrationTestFixture
     {
         // Arrange
         var cpfCnpj = "56493254051";
-        var dataVencimentoPrimeiraParcela = DateTime.Today.AddDays(30); // Futuro
+        var dataVencimentoPrimeiraParcela = DateTime.Today.AddDays(30);
 
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: cpfCnpj,
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 12,
-            DataVencimentoPrimeiraParcela: dataVencimentoPrimeiraParcela,
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
+        var command = ContratoTestHelper.CreateDefaultContratoCommand(
+            cpfCnpj: cpfCnpj,
+            dataVencimentoPrimeiraParcela: dataVencimentoPrimeiraParcela,
+            prazoMeses: 12
         );
 
         await Client.PostAsJsonAsync("/api/contratos", command);
@@ -195,15 +145,12 @@ public class ClientesControllerTests : IntegrationTestFixture
         var response = await Client.GetAsync($"/api/clientes/{cpfCnpj}/resumo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        var data = result.GetProperty("data");
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetData();
 
         // Todas as 12 parcelas estão a vencer
-        data.GetProperty("parcelasAVencer").GetInt32().Should().Be(12);
-        data.GetProperty("parcelasEmAtraso").GetInt32().Should().Be(0);
+        data.GetIntValue("parcelasAVencer").Should().Be(12);
+        data.GetIntValue("parcelasEmAtraso").Should().Be(0);
     }
 
     [Fact]
@@ -213,7 +160,7 @@ public class ClientesControllerTests : IntegrationTestFixture
         var response = await Client.GetAsync("/api/clientes//resumo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound); // 404 porque a rota não match
+        ResponseValidationHelper.ValidateNotFoundResponse(response.StatusCode); // 404 porque a rota não match
     }
 
     [Fact]
@@ -227,6 +174,6 @@ public class ClientesControllerTests : IntegrationTestFixture
         var response = await unauthenticatedClient.GetAsync($"/api/clientes/{cpfCnpj}/resumo");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ResponseValidationHelper.ValidateUnauthorizedResponse(response.StatusCode);
     }
 }

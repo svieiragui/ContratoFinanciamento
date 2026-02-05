@@ -28,16 +28,16 @@ public class PagamentosController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(
         Guid contratoId,
-        [FromBody] CreatePagamentoRequest request,
+        [FromBody] CreatePagamentoInput input,
         CancellationToken cancellationToken)
     {
         var correlationId = this.GetOrGenerateCorrelationId();
 
         var command = new CreatePagamentoCommand(
             contratoId,
-            request.NumeroParcela,
-            request.ValorPago,
-            request.DataPagamento,
+            input.NumeroParcela,
+            input.ValorPago,
+            input.DataPagamento,
             correlationId
         );
 
@@ -71,9 +71,3 @@ public class PagamentosController : ControllerBase
         return Ok(new { data = result.Data, correlationId });
     }
 }
-
-public record CreatePagamentoRequest(
-    int NumeroParcela,
-    decimal ValorPago,
-    DateTime DataPagamento
-);

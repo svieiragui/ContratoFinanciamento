@@ -1,4 +1,5 @@
 using ContractsApi.Domain.Repositories;
+using ContractsApi.Infrastructure.Data;
 using ContractsApi.Infrastructure.Repositories;
 
 namespace ContractsApi.Api.Startup
@@ -10,8 +11,9 @@ namespace ContractsApi.Api.Startup
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-            builder.Services.AddScoped<IContratoFinanciamentoRepository>(sp => new ContratoFinanciamentoRepository(connectionString));
-            builder.Services.AddScoped<IPagamentoRepository>(sp => new PagamentoRepository(connectionString));
+            builder.Services.AddScoped<IDbConnectionFactory>(sp => new DbConnectionFactory(connectionString));
+            builder.Services.AddScoped<IContratoFinanciamentoRepository, ContratoFinanciamentoRepository>();
+            builder.Services.AddScoped<IPagamentoRepository, PagamentoRepository>();
         }
     }
 }

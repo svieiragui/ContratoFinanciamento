@@ -1,62 +1,41 @@
-﻿using ContractsApi.IntegrationTests.Fixtures;
+﻿using ContractsApi.IntegrationTests.Helpers;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace ContractsApi.IntegrationTests.Controllers;
 
-public class AuthControllerTests : IntegrationTestFixture, IClassFixture<WebApplicationFactory<Program>>
+public class AuthControllerTests
 {
-    private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
 
-    public AuthControllerTests(WebApplicationFactory<Program> factory)
+    public AuthControllerTests()
     {
-        _factory = factory;
-        _client = _factory.CreateClient();
+        _client = new HttpClient { BaseAddress = new Uri("http://localhost") };
+    }
+
+    private object CreateLoginRequest(string username = "admin", string password = "Admin@123")
+    {
+        return new { username, password };
     }
 
     [Fact]
     public async Task Login_ValidCredentials_ReturnsTokenAndOk()
     {
-        // Arrange
-        var loginRequest = new
-        {
-            username = "admin",
-            password = "Admin@123"
-        };
-
-        // Act
+        var loginRequest = CreateLoginRequest();
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var content = await response.Content.ReadAsStringAsync();
-        var tokenResponse = JsonSerializer.Deserialize<JsonElement>(content);
-
-        tokenResponse.GetProperty("token").GetString().Should().NotBeNullOrEmpty();
-        tokenResponse.GetProperty("expiresIn").GetInt32().Should().BeGreaterThan(0);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
     }
 
     [Fact]
     public async Task Login_InvalidUsername_ReturnsUnauthorized()
     {
-        // Arrange
-        var loginRequest = new
-        {
-            username = "wronguser",
-            password = "Admin@123"
-        };
-
-        // Act
+        var loginRequest = CreateLoginRequest(username: "wronguser");
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-
+        ResponseValidationHelper.ValidateUnauthorizedResponse(response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         content.Should().Contain("Invalid credentials");
     }
@@ -64,93 +43,53 @@ public class AuthControllerTests : IntegrationTestFixture, IClassFixture<WebAppl
     [Fact]
     public async Task Login_InvalidPassword_ReturnsUnauthorized()
     {
-        // Arrange
-        var loginRequest = new
-        {
-            username = "admin",
-            password = "WrongPassword"
-        };
-
-        // Act
+        var loginRequest = CreateLoginRequest(password: "WrongPassword");
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ResponseValidationHelper.ValidateUnauthorizedResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Login_EmptyUsername_ReturnsUnauthorized()
     {
-        // Arrange
-        var loginRequest = new
-        {
-            username = "",
-            password = "Admin@123"
-        };
-
-        // Act
+        var loginRequest = CreateLoginRequest(username: "");
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ResponseValidationHelper.ValidateUnauthorizedResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Login_EmptyPassword_ReturnsUnauthorized()
     {
-        // Arrange
-        var loginRequest = new
-        {
-            username = "admin",
-            password = ""
-        };
-
-        // Act
+        var loginRequest = CreateLoginRequest(password: "");
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ResponseValidationHelper.ValidateUnauthorizedResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Login_ValidCredentials_TokenCanBeUsedForAuthorization()
     {
-        // Arrange
-        var loginRequest = new
-        {
-            username = "admin",
-            password = "Admin@123"
-        };
+        var loginRequest = CreateLoginRequest();
+        var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Act - Login
-        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
-        var content = await loginResponse.Content.ReadAsStringAsync();
-        var tokenResponse = JsonSerializer.Deserialize<JsonElement>(content);
-        var token = tokenResponse.GetProperty("token").GetString();
+        var content = await response.Content.ReadAsStringAsync();
+        var tokenResponse = JsonResponseHelper.Deserialize(content);
+        var token = tokenResponse.GetStringValue("token");
 
-        // Act - Use token to access protected endpoint
-        var authenticatedClient = _factory.CreateClient();
+        var authenticatedClient = new HttpClient { BaseAddress = new Uri("http://localhost") };
         authenticatedClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
         var protectedResponse = await authenticatedClient.GetAsync("/api/contratos");
 
-        // Assert
         protectedResponse.StatusCode.Should().NotBe(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
     public async Task Login_CaseSensitiveUsername_ReturnsUnauthorized()
     {
-        // Arrange
-        var loginRequest = new
-        {
-            username = "ADMIN", // uppercase
-            password = "Admin@123"
-        };
-
-        // Act
+        var loginRequest = CreateLoginRequest(username: "ADMIN");
         var response = await _client.PostAsJsonAsync("/api/auth/login", loginRequest);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ResponseValidationHelper.ValidateUnauthorizedResponse(response.StatusCode);
     }
 }

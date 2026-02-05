@@ -1,6 +1,7 @@
 ﻿using ContractsApi.Application.Features.ContratosFinanciamento.Create;
 using ContractsApi.Domain.Enums;
 using ContractsApi.IntegrationTests.Fixtures;
+using ContractsApi.IntegrationTests.Helpers;
 using FluentAssertions;
 using System.Net;
 using System.Net.Http.Json;
@@ -10,140 +11,79 @@ namespace ContractsApi.IntegrationTests.Controllers;
 
 public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
 {
-
     public ContratosFinanciamentoControllerTests() : base() { }
-
 
     [Fact]
     public async Task Create_ValidContrato_ReturnsCreated()
     {
         // Arrange
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "35711699059",
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
+        var command = ContratoTestHelper.CreateDefaultContratoCommand(cpfCnpj: "35711699059");
 
         // Act
         var response = await Client.PostAsJsonAsync("/api/contratos", command);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var result = await ResponseValidationHelper.ValidateCreatedResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        var data = result.GetProperty("data");
-
-        data.GetProperty("id").GetGuid().Should().NotBeEmpty();
-        data.GetProperty("clienteCpfCnpj").GetString().Should().Be("35711699059");
-        data.GetProperty("valorTotal").GetDecimal().Should().Be(50000);
-        data.GetProperty("valorParcela").GetDecimal().Should().BeGreaterThan(0);
-        data.GetProperty("saldoDevedor").GetDecimal().Should().Be(50000);
+        ContratoTestHelper.ValidateContratoResponse(data, "35711699059", 50000);
     }
 
     [Fact]
     public async Task Create_InvalidCpf_ReturnsBadRequest()
     {
         // Arrange
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "123", // CPF inválido
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
+        var command = ContratoTestHelper.CreateDefaultContratoCommand(cpfCnpj: "123");
 
         // Act
         var response = await Client.PostAsJsonAsync("/api/contratos", command);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        ResponseValidationHelper.ValidateBadRequestResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Create_NegativeValorTotal_ReturnsBadRequest()
     {
         // Arrange
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "12345678901",
-            ValorTotal: -1000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
+        var command = ContratoTestHelper.CreateDefaultContratoCommand(valorTotal: -1000);
 
         // Act
         var response = await Client.PostAsJsonAsync("/api/contratos", command);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        ResponseValidationHelper.ValidateBadRequestResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Create_PastDataVencimento_ReturnsBadRequest()
     {
         // Arrange
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "12345678901",
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(-1), // Data no passado
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
+        var command = ContratoTestHelper.CreateDefaultContratoCommand(
+            dataVencimentoPrimeiraParcela: DateTime.Today.AddDays(-1)
         );
 
         // Act
         var response = await Client.PostAsJsonAsync("/api/contratos", command);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        ResponseValidationHelper.ValidateBadRequestResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task GetById_ExistingContrato_ReturnsOk()
     {
         // Arrange
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "65973205061",
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
-
-        var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
-        var createContent = await createResponse.Content.ReadAsStringAsync();
-        var createResult = JsonSerializer.Deserialize<JsonElement>(createContent);
-        var createdData = createResult.GetProperty("data");
-        var contratoId = createdData.GetProperty("id").GetGuid();
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client, cpfCnpj: "65973205061");
 
         // Act
         var response = await Client.GetAsync($"/api/contratos/{contratoId}");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        var data = result.GetProperty("data");
-
-        data.GetProperty("id").GetGuid().Should().Be(contratoId);
+        data.GetGuidValue("id").Should().Be(contratoId);
     }
 
     [Fact]
@@ -156,35 +96,20 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
         var response = await Client.GetAsync($"/api/contratos/{nonExistingId}");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ResponseValidationHelper.ValidateNotFoundResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Delete_ExistingContrato_ReturnsNoContent()
     {
         // Arrange
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "23894066024",
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
-
-        var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
-        var createContent = await createResponse.Content.ReadAsStringAsync();
-        var createResult = JsonSerializer.Deserialize<JsonElement>(createContent);
-        var createdData = createResult.GetProperty("data");
-        var contratoId = createdData.GetProperty("id").GetGuid();
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client, cpfCnpj: "23894066024");
 
         // Act
         var response = await Client.DeleteAsync($"/api/contratos/{contratoId}");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        ResponseValidationHelper.ValidateNoContentResponse(response.StatusCode);
     }
 
     [Fact]
@@ -197,36 +122,21 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
         var response = await Client.DeleteAsync($"/api/contratos/{nonExistingId}");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ResponseValidationHelper.ValidateNotFoundResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Delete_ThenGetById_ReturnsNotFound()
     {
         // Arrange
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "07349756003",
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
-
-        var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
-        var createContent = await createResponse.Content.ReadAsStringAsync();
-        var createResult = JsonSerializer.Deserialize<JsonElement>(createContent);
-        var createdData = createResult.GetProperty("data");
-        var contratoId = createdData.GetProperty("id").GetGuid();
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client, cpfCnpj: "07349756003");
 
         // Act
         await Client.DeleteAsync($"/api/contratos/{contratoId}");
         var getResponse = await Client.GetAsync($"/api/contratos/{contratoId}");
 
         // Assert
-        getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ResponseValidationHelper.ValidateNotFoundResponse(getResponse.StatusCode);
     }
 
     [Fact]
@@ -234,22 +144,12 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
     {
         // Arrange
         var unauthenticatedClient = Factory.CreateClient();
-
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "12345678901",
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
+        var command = ContratoTestHelper.CreateDefaultContratoCommand();
 
         // Act
         var response = await unauthenticatedClient.PostAsJsonAsync("/api/contratos", command);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ResponseValidationHelper.ValidateUnauthorizedResponse(response.StatusCode);
     }
 }

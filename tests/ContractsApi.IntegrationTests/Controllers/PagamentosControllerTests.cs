@@ -1,140 +1,94 @@
 ﻿using ContractsApi.Application.Features.ContratosFinanciamento.Create;
 using ContractsApi.Domain.Enums;
 using ContractsApi.IntegrationTests.Fixtures;
+using ContractsApi.IntegrationTests.Helpers;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Testcontainers.PostgreSql;
 
 namespace ContractsApi.IntegrationTests.Controllers;
 
 public class PagamentosControllerTests : IntegrationTestFixture
 {
     public PagamentosControllerTests() : base() { }
-    
-    private async Task<Guid> CreateContratoAsync()
-    {
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "13668835004",
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
-
-        var response = await Client.PostAsJsonAsync("/api/contratos", command);
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        return result.GetProperty("data").GetProperty("id").GetGuid();
-    }
 
     [Fact]
     public async Task Create_ValidPagamento_ReturnsCreated()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 1,
-            valorPago = 1346.18m,
-            dataPagamento = DateTime.Today.AddDays(30)
-        };
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest();
 
         // Act
         var response = await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var result = await ResponseValidationHelper.ValidateCreatedResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-        var data = result.GetProperty("data");
-
-        data.GetProperty("id").GetGuid().Should().NotBeEmpty();
-        data.GetProperty("contratoId").GetGuid().Should().Be(contratoId);
+        PagamentoTestHelper.ValidatePagamentoResponse(data, contratoId, 1);
     }
 
     [Fact]
     public async Task Create_PagamentoEmDia_ReturnsStatusEmDia()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
         var dataVencimento = DateTime.Today.AddDays(30);
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 1,
-            valorPago = 1346.18m,
-            dataPagamento = dataVencimento // Mesmo dia do vencimento
-        };
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest(
+            numeroParcela: 1,
+            dataPagamento: dataVencimento
+        );
 
         // Act
         var response = await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var result = await ResponseValidationHelper.ValidateCreatedResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-
-        result.GetProperty("data").GetProperty("status").GetString().Should().Be("EM_DIA");
+        PagamentoTestHelper.ValidatePagamentoStatus(data, "EM_DIA");
     }
 
     [Fact]
     public async Task Create_PagamentoAntecipado_ReturnsStatusAntecipado()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 1,
-            valorPago = 1346.18m,
-            dataPagamento = DateTime.Today.AddDays(20) // Antes do vencimento (dia 30)
-        };
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest(
+            numeroParcela: 1,
+            dataPagamento: DateTime.Today.AddDays(20)
+        );
 
         // Act
         var response = await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var result = await ResponseValidationHelper.ValidateCreatedResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-
-        result.GetProperty("data").GetProperty("status").GetString().Should().Be("ANTECIPADO");
+        PagamentoTestHelper.ValidatePagamentoStatus(data, "ANTECIPADO");
     }
 
     [Fact]
     public async Task Create_PagamentoAtrasado_ReturnsStatusEmAtraso()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 1,
-            valorPago = 1346.18m,
-            dataPagamento = DateTime.Today.AddDays(40) // Depois do vencimento (dia 30)
-        };
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest(
+            numeroParcela: 1,
+            dataPagamento: DateTime.Today.AddDays(40)
+        );
 
         // Act
         var response = await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var result = await ResponseValidationHelper.ValidateCreatedResponseAsync(response);
+        var data = result.GetData();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-
-        result.GetProperty("data").GetProperty("status").GetString().Should().Be("EM_ATRASO");
+        PagamentoTestHelper.ValidatePagamentoStatus(data, "EM_ATRASO");
     }
 
     [Fact]
@@ -142,110 +96,77 @@ public class PagamentosControllerTests : IntegrationTestFixture
     {
         // Arrange
         var nonExistingContratoId = Guid.NewGuid();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 1,
-            valorPago = 1346.18m,
-            dataPagamento = DateTime.Today
-        };
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest();
 
         // Act
         var response = await Client.PostAsJsonAsync($"/api/contratos/{nonExistingContratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        ResponseValidationHelper.ValidateNotFoundResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Create_InvalidNumeroParcela_ReturnsBadRequest()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 0, // Inválido
-            valorPago = 1346.18m,
-            dataPagamento = DateTime.Today
-        };
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest(numeroParcela: 0);
 
         // Act
         var response = await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        ResponseValidationHelper.ValidateBadRequestResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Create_NegativeValorPago_ReturnsBadRequest()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 1,
-            valorPago = -100m, // Negativo
-            dataPagamento = DateTime.Today
-        };
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest(valorPago: -100m);
 
         // Act
         var response = await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        ResponseValidationHelper.ValidateBadRequestResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task Create_ParcelaExceedsPrazo_ReturnsBadRequest()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 100, // Contrato tem 48 parcelas
-            valorPago = 1346.18m,
-            dataPagamento = DateTime.Today
-        };
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest(numeroParcela: 100);
 
         // Act
         var response = await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        ResponseValidationHelper.ValidateBadRequestResponse(response.StatusCode);
     }
 
     [Fact]
     public async Task GetByContrato_EmptyList_ReturnsOk()
     {
-        var guid = Guid.NewGuid();
         // Act
-        var response = await Client.GetAsync($"/api/contratos/{guid}/pagamentos");
+        var response = await Client.GetAsync($"/api/contratos/{Guid.NewGuid()}/pagamentos");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetDataArray();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content).GetProperty("data");
-
-        result.ValueKind.Should().Be(JsonValueKind.Array);
-        result.GetArrayLength().Should().Be(0);
+        data.ValueKind.Should().Be(JsonValueKind.Array);
+        data.GetArrayLength().Should().Be(0);
     }
 
     [Fact]
     public async Task GetByContrato_AfterCreatingPagamento_ReturnsListWithOneItem()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 1,
-            valorPago = 1346.18m,
-            dataPagamento = DateTime.Today.AddDays(30)
-        };
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest();
 
         await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
@@ -253,48 +174,39 @@ public class PagamentosControllerTests : IntegrationTestFixture
         var response = await Client.GetAsync($"/api/contratos/{contratoId}/pagamentos");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetDataArray();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content).GetProperty("data");
-
-        result.GetArrayLength().Should().Be(1);
+        data.GetArrayLength().Should().Be(1);
     }
 
     [Fact]
     public async Task GetByContrato_MultiplePagamentos_ReturnsOrderedList()
     {
         // Arrange
-        var contratoId = await CreateContratoAsync();
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var dataVencimentoPrimeiraParcela = DateTime.Today.AddDays(30);
 
-        // Criar 3 pagamentos
-        for (int i = 1; i <= 3; i++)
-        {
-            var pagamentoRequest = new
-            {
-                numeroParcela = i,
-                valorPago = 1346.18m,
-                dataPagamento = DateTime.Today.AddMonths(i)
-            };
-
-            await Client.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
-        }
+        await PagamentoTestHelper.CreateMultiplePagamentosAsync(
+            Client,
+            contratoId,
+            quantidadeParcelas: 3,
+            dataVencimentoPrimeiraParcela
+        );
 
         // Act
         var response = await Client.GetAsync($"/api/contratos/{contratoId}/pagamentos");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await ResponseValidationHelper.ValidateOkResponseAsync(response);
+        var data = result.GetDataArray();
 
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content).GetProperty("data");
-
-        result.GetArrayLength().Should().Be(3);
+        data.GetArrayLength().Should().Be(3);
 
         // Verificar ordem
-        var firstParcela = result[0].GetProperty("numeroParcela").GetInt32();
-        var secondParcela = result[1].GetProperty("numeroParcela").GetInt32();
-        var thirdParcela = result[2].GetProperty("numeroParcela").GetInt32();
+        var firstParcela = data[0].GetIntValue("numeroParcela");
+        var secondParcela = data[1].GetIntValue("numeroParcela");
+        var thirdParcela = data[2].GetIntValue("numeroParcela");
 
         firstParcela.Should().BeLessThan(secondParcela);
         secondParcela.Should().BeLessThan(thirdParcela);
@@ -305,19 +217,13 @@ public class PagamentosControllerTests : IntegrationTestFixture
     {
         // Arrange
         var unauthenticatedClient = Factory.CreateClient();
-        var contratoId = await CreateContratoAsync();
-
-        var pagamentoRequest = new
-        {
-            numeroParcela = 1,
-            valorPago = 1346.18m,
-            dataPagamento = DateTime.Today
-        };
+        var contratoId = await ContratoTestHelper.CreateContratoAsync(Client);
+        var pagamentoRequest = PagamentoTestHelper.CreateDefaultPagamentoRequest();
 
         // Act
         var response = await unauthenticatedClient.PostAsJsonAsync($"/api/contratos/{contratoId}/pagamentos", pagamentoRequest);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ResponseValidationHelper.ValidateUnauthorizedResponse(response.StatusCode);
     }
 }

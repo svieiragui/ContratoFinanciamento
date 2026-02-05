@@ -34,22 +34,22 @@ public class ContratosFinanciamentoController : ControllerBase
     /// Cria um novo contrato de financiamento
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateContratoCommand command, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create([FromBody] CreateContratoInput input, CancellationToken cancellationToken)
     {
         var correlationId = this.GetOrGenerateCorrelationId();
 
-        var commandWithCorrelation = new CreateContratoCommand(
-            command.ClienteCpfCnpj,
-            command.ValorTotal,
-            command.TaxaMensal,
-            command.PrazoMeses,
-            command.DataVencimentoPrimeiraParcela,
-            command.TipoVeiculo,
-            command.CondicaoVeiculo,
+        var command = new CreateContratoCommand(
+            input.ClienteCpfCnpj,
+            input.ValorTotal,
+            input.TaxaMensal,
+            input.PrazoMeses,
+            input.DataVencimentoPrimeiraParcela,
+            input.TipoVeiculo,
+            input.CondicaoVeiculo,
             correlationId
         );
 
-        var result = await _createHandler.Handle(commandWithCorrelation, cancellationToken);
+        var result = await _createHandler.Handle(command, cancellationToken);
 
         if (!result.IsSuccess)
         {

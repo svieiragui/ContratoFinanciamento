@@ -1,23 +1,23 @@
 ﻿using ContractsApi.Domain.Entities;
 using ContractsApi.Domain.Enums;
 using ContractsApi.Domain.Repositories;
+using ContractsApi.Infrastructure.Data;
 using Dapper;
-using Npgsql;
 
 namespace ContractsApi.Infrastructure.Repositories;
 
 public class ContratoFinanciamentoRepository : IContratoFinanciamentoRepository
 {
-    private readonly string _connectionString;
+    private readonly IDbConnectionFactory _connectionFactory;
 
-    public ContratoFinanciamentoRepository(string connectionString)
+    public ContratoFinanciamentoRepository(IDbConnectionFactory connectionFactory)
     {
-        _connectionString = connectionString;
+        _connectionFactory = connectionFactory;
     }
 
     public async Task<ContratoFinanciamento?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             SELECT id, cliente_cpf_cnpj, valor_total, taxa_mensal, prazo_meses,
@@ -33,7 +33,7 @@ public class ContratoFinanciamentoRepository : IContratoFinanciamentoRepository
 
     public async Task<IEnumerable<ContratoFinanciamento>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             SELECT id, cliente_cpf_cnpj, valor_total, taxa_mensal, prazo_meses,
@@ -49,7 +49,7 @@ public class ContratoFinanciamentoRepository : IContratoFinanciamentoRepository
 
     public async Task<IEnumerable<ContratoFinanciamento>> GetByClienteCpfCnpjAsync(string cpfCnpj, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             SELECT id, cliente_cpf_cnpj, valor_total, taxa_mensal, prazo_meses,
@@ -66,7 +66,7 @@ public class ContratoFinanciamentoRepository : IContratoFinanciamentoRepository
 
     public async Task<Guid> CreateAsync(ContratoFinanciamento contrato, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             INSERT INTO contratos_financiamento (
@@ -102,7 +102,7 @@ public class ContratoFinanciamentoRepository : IContratoFinanciamentoRepository
 
     public async Task UpdateAsync(ContratoFinanciamento contrato, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             UPDATE contratos_financiamento
@@ -122,7 +122,7 @@ public class ContratoFinanciamentoRepository : IContratoFinanciamentoRepository
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = "DELETE FROM contratos_financiamento WHERE id = @Id";
 
@@ -131,7 +131,7 @@ public class ContratoFinanciamentoRepository : IContratoFinanciamentoRepository
 
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = "SELECT COUNT(1) FROM contratos_financiamento WHERE id = @Id";
 

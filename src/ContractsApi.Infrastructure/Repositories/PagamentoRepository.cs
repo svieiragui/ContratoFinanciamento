@@ -1,23 +1,23 @@
 ﻿using ContractsApi.Domain.Entities;
 using ContractsApi.Domain.Enums;
 using ContractsApi.Domain.Repositories;
+using ContractsApi.Infrastructure.Data;
 using Dapper;
-using Npgsql;
 
 namespace ContractsApi.Infrastructure.Repositories;
 
 public class PagamentoRepository : IPagamentoRepository
 {
-    private readonly string _connectionString;
+    private readonly IDbConnectionFactory _connectionFactory;
 
-    public PagamentoRepository(string connectionString)
+    public PagamentoRepository(IDbConnectionFactory connectionFactory)
     {
-        _connectionString = connectionString;
+        _connectionFactory = connectionFactory;
     }
 
     public async Task<Pagamento?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             SELECT id, contrato_id, numero_parcela, valor_pago, data_pagamento,
@@ -33,7 +33,7 @@ public class PagamentoRepository : IPagamentoRepository
 
     public async Task<IEnumerable<Pagamento>> GetByContratoIdAsync(Guid contratoId, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             SELECT id, contrato_id, numero_parcela, valor_pago, data_pagamento,
@@ -50,7 +50,7 @@ public class PagamentoRepository : IPagamentoRepository
 
     public async Task<Pagamento?> GetByContratoAndParcelaAsync(Guid contratoId, int numeroParcela, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             SELECT id, contrato_id, numero_parcela, valor_pago, data_pagamento,
@@ -70,7 +70,7 @@ public class PagamentoRepository : IPagamentoRepository
 
     public async Task<Guid> CreateAsync(Pagamento pagamento, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = @"
             INSERT INTO pagamentos (
@@ -104,7 +104,7 @@ public class PagamentoRepository : IPagamentoRepository
 
     public async Task<int> CountParcelasPagasByContratoAsync(Guid contratoId, CancellationToken cancellationToken = default)
     {
-        using var connection = new NpgsqlConnection(_connectionString);
+        using var connection = _connectionFactory.CreateConnection();
 
         var sql = "SELECT COUNT(*) FROM pagamentos WHERE contrato_id = @ContratoId";
 
