@@ -5,6 +5,7 @@ using ContractsApi.Domain.Repositories;
 using FluentAssertions;
 using FluentValidation;
 using Moq;
+using MediatR;
 
 namespace ContractsApi.UnitTests.Features.Pagamentos;
 
@@ -13,6 +14,7 @@ public class CreatePagamentoHandlerTests
     private readonly Mock<IPagamentoRepository> _pagamentoRepositoryMock;
     private readonly Mock<IContratoFinanciamentoRepository> _contratoRepositoryMock;
     private readonly IValidator<CreatePagamentoCommand> _validator;
+    private readonly Mock<IPublisher> _publisherMock;
     private readonly CreatePagamentoHandler _handler;
 
     public CreatePagamentoHandlerTests()
@@ -20,10 +22,12 @@ public class CreatePagamentoHandlerTests
         _pagamentoRepositoryMock = new Mock<IPagamentoRepository>();
         _contratoRepositoryMock = new Mock<IContratoFinanciamentoRepository>();
         _validator = new CreatePagamentoValidator();
+        _publisherMock = new Mock<IPublisher>();
         _handler = new CreatePagamentoHandler(
             _pagamentoRepositoryMock.Object,
             _contratoRepositoryMock.Object,
-            _validator);
+            _validator,
+            _publisherMock.Object);
     }
 
     [Fact]

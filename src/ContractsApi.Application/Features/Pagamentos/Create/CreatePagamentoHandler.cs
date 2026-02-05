@@ -1,7 +1,9 @@
-﻿using ContractsApi.Domain.Common;
+﻿using ContractsApi.Application.Features.Pagamentos.Notifications;
+using ContractsApi.Domain.Common;
 using ContractsApi.Domain.Entities;
 using ContractsApi.Domain.Repositories;
 using FluentValidation;
+using MediatR;
 
 namespace ContractsApi.Application.Features.Pagamentos.Create;
 
@@ -10,15 +12,18 @@ public class CreatePagamentoHandler
     private readonly IPagamentoRepository _pagamentoRepository;
     private readonly IContratoFinanciamentoRepository _contratoRepository;
     private readonly IValidator<CreatePagamentoCommand> _validator;
+    private readonly IPublisher _publisher;
 
     public CreatePagamentoHandler(
         IPagamentoRepository pagamentoRepository,
         IContratoFinanciamentoRepository contratoRepository,
-        IValidator<CreatePagamentoCommand> validator)
+        IValidator<CreatePagamentoCommand> validator,
+        IPublisher publisher)
     {
         _pagamentoRepository = pagamentoRepository;
         _contratoRepository = contratoRepository;
         _validator = validator;
+        _publisher = publisher;
     }
 
     public async Task<Result<PagamentoResponseDto>> Handle(
@@ -80,11 +85,21 @@ public class CreatePagamentoHandler
             novoSaldoDevedor
         );
 
+        // RESPONSABILIDADE ÚNICA: Apenas registrar o pagamento
         await _pagamentoRepository.CreateAsync(pagamento, cancellationToken);
 
-        // Atualizar saldo devedor do contrato
-        contrato.AtualizarSaldoDevedor(amortizacao);
-        await _contratoRepository.UpdateAsync(contrato, cancellationToken);
+        // Fire-and-Forget: Publicar notification para atualizar saldo devedor em background
+        var notification = new PagamentoRegistradoNotification(
+            PagamentoId: pagamento.Id,
+            ContratoId: pagamento.ContratoId,
+            NumeroParcela: pagamento.NumeroParcela,
+            ValorPago: pagamento.ValorPago,
+            AmortizacaoPaga: pagamento.AmortizacaoPaga,
+            DataRegistro: DateTime.UtcNow
+        );
+
+        // Publish não aguarda a conclusão - fire-and-forget
+        await _publisher.Publish(notification, cancellationToken);
 
         var response = new PagamentoResponseDto(
             pagamento.Id,
