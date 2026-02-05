@@ -1,13 +1,21 @@
+using MediatR;
 using ContractsApi.Api.Configuration;
 using ContractsApi.Api.Middlewares;
+using ContractsApi.Application.Features.Clientes.GetResumo;
+using ContractsApi.Application.Features.ContratosFinanciamento.Create;
+using ContractsApi.Application.Features.ContratosFinanciamento.Delete;
+using ContractsApi.Application.Features.ContratosFinanciamento.GetAll;
+using ContractsApi.Application.Features.ContratosFinanciamento.GetById;
 using ContractsApi.Application.Features.Pagamentos.Create;
+using ContractsApi.Application.Features.Pagamentos.GetByContrato;
 using ContractsApi.Domain.Repositories;
 using ContractsApi.Infrastructure.Repositories;
-using MediatR;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Reflection;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +41,23 @@ builder.Services.AddMediatR(typeof(CreatePagamentoHandler));
 // Repositórios
 builder.Services.AddScoped<IContratoFinanciamentoRepository>(sp => new ContratoFinanciamentoRepository(connectionString));
 builder.Services.AddScoped<IPagamentoRepository>(sp => new PagamentoRepository(connectionString));
+
+// Handlers - Contratos Financiamento
+builder.Services.AddScoped<CreateContratoHandler>();
+builder.Services.AddScoped<GetAllContratosHandler>();
+builder.Services.AddScoped<GetContratoByIdHandler>();
+builder.Services.AddScoped<DeleteContratoHandler>();
+
+// Handlers - Pagamentos
+builder.Services.AddScoped<CreatePagamentoHandler>();
+builder.Services.AddScoped<GetPagamentosByContratoHandler>();
+
+// Handlers - Clientes
+builder.Services.AddScoped<GetResumoClienteHandler>();
+
+// Validators
+builder.Services.AddValidatorsFromAssemblyContaining<CreateContratoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<CreatePagamentoValidator>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()

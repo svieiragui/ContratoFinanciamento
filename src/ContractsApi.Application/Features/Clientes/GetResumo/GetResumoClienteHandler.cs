@@ -60,7 +60,7 @@ public class GetResumoClienteHandler
             var pagamentosList = pagamentos.ToList();
 
             parcelasPagas += pagamentosList.Count;
-            parcelasEmDia += pagamentosList.Count(p => p.Status == StatusPagamento.EM_DIA);
+            parcelasEmDia += pagamentosList.Count(p => new List<StatusPagamento>{ StatusPagamento.EM_DIA, StatusPagamento.ANTECIPADO }.Contains(p.Status));
 
             // Adicionar parcelas do contrato
             for (int i = 1; i <= contrato.PrazoMeses; i++)

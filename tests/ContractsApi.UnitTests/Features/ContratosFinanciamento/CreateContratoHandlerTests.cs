@@ -29,7 +29,7 @@ public class CreateContratoHandlerTests
     {
         // Arrange
         var command = new CreateContratoCommand(
-            "12345678901",
+            "93838094000",
             50000,
             2.5m,
             48,

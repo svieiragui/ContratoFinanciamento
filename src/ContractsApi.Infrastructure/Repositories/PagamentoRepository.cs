@@ -113,6 +113,16 @@ public class PagamentoRepository : IPagamentoRepository
 
     private static Pagamento MapToEntity(dynamic row)
     {
+        // Converter DateOnly para DateTime se necessário
+        DateTime dataVencimento = row.data_vencimento is DateOnly dateOnlyVencimento
+            ? dateOnlyVencimento.ToDateTime(TimeOnly.MinValue)
+            : (DateTime)row.data_vencimento;
+
+        // Converter DateOnly para DateTime se necessário
+        DateTime dataPagamento = row.data_pagamento is DateOnly dateOnlyPagto
+            ? dateOnlyPagto.ToDateTime(TimeOnly.MinValue)
+            : (DateTime)row.data_pagamento;
+
         var pagamento = typeof(Pagamento)
             .GetMethod("Create", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
             .Invoke(null, new object[]
@@ -120,8 +130,8 @@ public class PagamentoRepository : IPagamentoRepository
                 (Guid)row.contrato_id,
                 (int)row.numero_parcela,
                 (decimal)row.valor_pago,
-                (DateTime)row.data_pagamento,
-                (DateTime)row.data_vencimento,
+                dataPagamento,
+                dataVencimento,
                 (decimal)row.juros_pago,
                 (decimal)row.amortizacao_paga,
                 (decimal)row.saldo_devedor_apos
