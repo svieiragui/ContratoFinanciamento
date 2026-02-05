@@ -1,6 +1,7 @@
 ﻿using ContractsApi.Domain.Common;
 using ContractsApi.Domain.Enums;
 using ContractsApi.Domain.Repositories;
+using Microsoft.Extensions.Logging;
 
 namespace ContractsApi.Application.Features.Clientes.GetResumo;
 
@@ -8,21 +9,29 @@ public class GetResumoClienteHandler
 {
     private readonly IContratoFinanciamentoRepository _contratoRepository;
     private readonly IPagamentoRepository _pagamentoRepository;
+    private readonly ILogger<GetResumoClienteHandler> _logger;
 
     public GetResumoClienteHandler(
         IContratoFinanciamentoRepository contratoRepository,
-        IPagamentoRepository pagamentoRepository)
+        IPagamentoRepository pagamentoRepository,
+        ILogger<GetResumoClienteHandler> logger)
     {
         _contratoRepository = contratoRepository;
         _pagamentoRepository = pagamentoRepository;
+        _logger = logger;
     }
 
     public async Task<Result<ResumoClienteDto>> Handle(
         GetResumoClienteQuery query,
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Iniciando GetResumo - CorrelationId: {CorrelationId}, CpfCnpj: {CpfCnpj}",
+            query.CorrelationId, query.CpfCnpj);
+
         if (string.IsNullOrWhiteSpace(query.CpfCnpj))
         {
+            _logger.LogError("Falha: CPF/CNPJ inválido ou vazio - CorrelationId: {CorrelationId}",
+                query.CorrelationId);
             return Result<ResumoClienteDto>.Failure("CPF/CNPJ é obrigatório", 400);
         }
 
@@ -31,6 +40,8 @@ public class GetResumoClienteHandler
 
         if (!contratosList.Any())
         {
+            _logger.LogError("Falha: Cliente não possui contratos - CorrelationId: {CorrelationId}, CpfCnpj: {CpfCnpj}",
+                query.CorrelationId, query.CpfCnpj);
             return Result<ResumoClienteDto>.Failure("Cliente não possui contratos", 404);
         }
 
@@ -85,6 +96,9 @@ public class GetResumoClienteHandler
             percentualEmDia,
             saldoDevedorConsolidado
         );
+
+        _logger.LogInformation("GetResumo finalizado com sucesso - CorrelationId: {CorrelationId}",
+            query.CorrelationId);
 
         return Result<ResumoClienteDto>.Success(resumo);
     }
