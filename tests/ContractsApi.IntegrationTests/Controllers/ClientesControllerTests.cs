@@ -21,7 +21,8 @@ public class ClientesControllerTests : IntegrationTestFixture
             PrazoMeses: prazoMeses,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         var response = await Client.PostAsJsonAsync("/api/contratos", command);
@@ -180,7 +181,8 @@ public class ClientesControllerTests : IntegrationTestFixture
             PrazoMeses: 12,
             DataVencimentoPrimeiraParcela: dataVencimentoPrimeiraParcela,
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         await Client.PostAsJsonAsync("/api/contratos", command);
@@ -212,7 +214,8 @@ public class ClientesControllerTests : IntegrationTestFixture
             PrazoMeses: 12,
             DataVencimentoPrimeiraParcela: dataVencimentoPrimeiraParcela,
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         await Client.PostAsJsonAsync("/api/contratos", command);

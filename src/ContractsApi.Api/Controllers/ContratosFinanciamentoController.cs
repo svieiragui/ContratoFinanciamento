@@ -1,4 +1,5 @@
-﻿using ContractsApi.Application.Features.ContratosFinanciamento.Create;
+﻿using ContractsApi.Api.Extensions;
+using ContractsApi.Application.Features.ContratosFinanciamento.Create;
 using ContractsApi.Application.Features.ContratosFinanciamento.Delete;
 using ContractsApi.Application.Features.ContratosFinanciamento.GetAll;
 using ContractsApi.Application.Features.ContratosFinanciamento.GetById;
@@ -35,14 +36,27 @@ public class ContratosFinanciamentoController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateContratoCommand command, CancellationToken cancellationToken)
     {
-        var result = await _createHandler.Handle(command, cancellationToken);
+        var correlationId = this.GetOrGenerateCorrelationId();
+
+        var commandWithCorrelation = new CreateContratoCommand(
+            command.ClienteCpfCnpj,
+            command.ValorTotal,
+            command.TaxaMensal,
+            command.PrazoMeses,
+            command.DataVencimentoPrimeiraParcela,
+            command.TipoVeiculo,
+            command.CondicaoVeiculo,
+            correlationId
+        );
+
+        var result = await _createHandler.Handle(commandWithCorrelation, cancellationToken);
 
         if (!result.IsSuccess)
         {
-            return StatusCode(result.StatusCode, new { message = result.ErrorMessage });
+            return StatusCode(result.StatusCode, new { message = result.ErrorMessage, correlationId });
         }
 
-        return StatusCode(result.StatusCode, result.Data);
+        return StatusCode(result.StatusCode, new { data = result.Data, correlationId });
     }
 
     /// <summary>
@@ -51,14 +65,16 @@ public class ContratosFinanciamentoController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        var result = await _getAllHandler.Handle(new GetAllContratosQuery(), cancellationToken);
+        var correlationId = this.GetOrGenerateCorrelationId();
+
+        var result = await _getAllHandler.Handle(new GetAllContratosQuery(correlationId), cancellationToken);
 
         if (!result.IsSuccess)
         {
-            return StatusCode(result.StatusCode, new { message = result.ErrorMessage });
+            return StatusCode(result.StatusCode, new { message = result.ErrorMessage, correlationId });
         }
 
-        return Ok(result.Data);
+        return Ok(new { data = result.Data, correlationId });
     }
 
     /// <summary>
@@ -67,14 +83,16 @@ public class ContratosFinanciamentoController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _getByIdHandler.Handle(new GetContratoByIdQuery(id), cancellationToken);
+        var correlationId = this.GetOrGenerateCorrelationId();
+
+        var result = await _getByIdHandler.Handle(new GetContratoByIdQuery(id, correlationId), cancellationToken);
 
         if (!result.IsSuccess)
         {
-            return StatusCode(result.StatusCode, new { message = result.ErrorMessage });
+            return StatusCode(result.StatusCode, new { message = result.ErrorMessage, correlationId });
         }
 
-        return Ok(result.Data);
+        return Ok(new { data = result.Data, correlationId });
     }
 
     /// <summary>
@@ -83,11 +101,13 @@ public class ContratosFinanciamentoController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var result = await _deleteHandler.Handle(new DeleteContratoCommand(id), cancellationToken);
+        var correlationId = this.GetOrGenerateCorrelationId();
+
+        var result = await _deleteHandler.Handle(new DeleteContratoCommand(id, correlationId), cancellationToken);
 
         if (!result.IsSuccess)
         {
-            return StatusCode(result.StatusCode, new { message = result.ErrorMessage });
+            return StatusCode(result.StatusCode, new { message = result.ErrorMessage, correlationId });
         }
 
         return NoContent();

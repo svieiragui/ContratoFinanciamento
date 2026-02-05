@@ -4,5 +4,6 @@ public record CreatePagamentoCommand(
     Guid ContratoId,
     int NumeroParcela,
     decimal ValorPago,
-    DateTime DataPagamento
+    DateTime DataPagamento,
+    string CorrelationId
 );

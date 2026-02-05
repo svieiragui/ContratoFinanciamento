@@ -6,6 +6,7 @@ using FluentAssertions;
 using FluentValidation;
 using Moq;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace ContractsApi.UnitTests.Features.Pagamentos;
 
@@ -15,6 +16,7 @@ public class CreatePagamentoHandlerTests
     private readonly Mock<IContratoFinanciamentoRepository> _contratoRepositoryMock;
     private readonly IValidator<CreatePagamentoCommand> _validator;
     private readonly Mock<IPublisher> _publisherMock;
+    private readonly Mock<ILogger<CreatePagamentoHandler>> _loggerMock;
     private readonly CreatePagamentoHandler _handler;
 
     public CreatePagamentoHandlerTests()
@@ -23,11 +25,13 @@ public class CreatePagamentoHandlerTests
         _contratoRepositoryMock = new Mock<IContratoFinanciamentoRepository>();
         _validator = new CreatePagamentoValidator();
         _publisherMock = new Mock<IPublisher>();
+        _loggerMock = new Mock<ILogger<CreatePagamentoHandler>>();
         _handler = new CreatePagamentoHandler(
             _pagamentoRepositoryMock.Object,
             _contratoRepositoryMock.Object,
             _validator,
-            _publisherMock.Object);
+            _publisherMock.Object,
+            _loggerMock.Object);
     }
 
     [Fact]
@@ -51,7 +55,8 @@ public class CreatePagamentoHandlerTests
             contratoId,
             1,
             contrato.ValorParcela,
-            DateTime.Today
+            DateTime.Today,
+            Guid.NewGuid().ToString()
         );
 
         _contratoRepositoryMock.Setup(x => x.GetByIdAsync(contratoId, It.IsAny<CancellationToken>()))
@@ -79,7 +84,8 @@ public class CreatePagamentoHandlerTests
             Guid.NewGuid(),
             1,
             1000,
-            DateTime.Today
+            DateTime.Today,
+            Guid.NewGuid().ToString()
         );
 
         _contratoRepositoryMock.Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -126,7 +132,8 @@ public class CreatePagamentoHandlerTests
             contratoId,
             1,
             1000,
-            DateTime.Today
+            DateTime.Today,
+            Guid.NewGuid().ToString()
         );
 
         _contratoRepositoryMock.Setup(x => x.GetByIdAsync(contratoId, It.IsAny<CancellationToken>()))

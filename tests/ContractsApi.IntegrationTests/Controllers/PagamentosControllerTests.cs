@@ -24,7 +24,8 @@ public class PagamentosControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         var response = await Client.PostAsJsonAsync("/api/contratos", command);

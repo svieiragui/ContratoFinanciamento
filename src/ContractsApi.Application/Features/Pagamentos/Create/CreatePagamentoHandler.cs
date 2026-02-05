@@ -4,6 +4,7 @@ using ContractsApi.Domain.Entities;
 using ContractsApi.Domain.Repositories;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Logging;
 
 namespace ContractsApi.Application.Features.Pagamentos.Create;
 
@@ -13,27 +14,35 @@ public class CreatePagamentoHandler
     private readonly IContratoFinanciamentoRepository _contratoRepository;
     private readonly IValidator<CreatePagamentoCommand> _validator;
     private readonly IPublisher _publisher;
+    private readonly ILogger<CreatePagamentoHandler> _logger;
 
     public CreatePagamentoHandler(
         IPagamentoRepository pagamentoRepository,
         IContratoFinanciamentoRepository contratoRepository,
         IValidator<CreatePagamentoCommand> validator,
-        IPublisher publisher)
+        IPublisher publisher,
+        ILogger<CreatePagamentoHandler> logger)
     {
         _pagamentoRepository = pagamentoRepository;
         _contratoRepository = contratoRepository;
         _validator = validator;
         _publisher = publisher;
+        _logger = logger;
     }
 
     public async Task<Result<PagamentoResponseDto>> Handle(
         CreatePagamentoCommand command,
         CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Iniciando CreatePagamento - CorrelationId: {CorrelationId}, ContratoId: {ContratoId}, NumeroParcela: {NumeroParcela}",
+            command.CorrelationId, command.ContratoId, command.NumeroParcela);
+
         var validationResult = await _validator.ValidateAsync(command, cancellationToken);
         if (!validationResult.IsValid)
         {
             var errors = string.Join(", ", validationResult.Errors.Select(e => e.ErrorMessage));
+            _logger.LogError("Falha: Validação falhou - CorrelationId: {CorrelationId}, Erros: {Errors}",
+                command.CorrelationId, errors);
             return Result<PagamentoResponseDto>.Failure(errors, 400);
         }
 
@@ -41,6 +50,8 @@ public class CreatePagamentoHandler
         var contrato = await _contratoRepository.GetByIdAsync(command.ContratoId, cancellationToken);
         if (contrato == null)
         {
+            _logger.LogError("Falha: Contrato não encontrado - CorrelationId: {CorrelationId}, ContratoId: {ContratoId}",
+                command.CorrelationId, command.ContratoId);
             return Result<PagamentoResponseDto>.Failure("Contrato não encontrado", 404);
         }
 
@@ -52,12 +63,16 @@ public class CreatePagamentoHandler
 
         if (pagamentoExistente != null)
         {
+            _logger.LogError("Falha: Parcela já foi paga - CorrelationId: {CorrelationId}, ContratoId: {ContratoId}, NumeroParcela: {NumeroParcela}",
+                command.CorrelationId, command.ContratoId, command.NumeroParcela);
             return Result<PagamentoResponseDto>.Failure("Parcela já foi paga", 409);
         }
 
         // Validar número da parcela
         if (command.NumeroParcela > contrato.PrazoMeses)
         {
+            _logger.LogError("Falha: Número da parcela inválido - CorrelationId: {CorrelationId}, NumeroParcela: {NumeroParcela}, PrazoMeses: {PrazoMeses}",
+                command.CorrelationId, command.NumeroParcela, contrato.PrazoMeses);
             return Result<PagamentoResponseDto>.Failure(
                 $"Número da parcela não pode exceder o prazo de {contrato.PrazoMeses} meses",
                 400);
@@ -85,10 +100,8 @@ public class CreatePagamentoHandler
             novoSaldoDevedor
         );
 
-        // RESPONSABILIDADE ÚNICA: Apenas registrar o pagamento
         await _pagamentoRepository.CreateAsync(pagamento, cancellationToken);
 
-        // Fire-and-Forget: Publicar notification para atualizar saldo devedor em background
         var notification = new PagamentoRegistradoNotification(
             PagamentoId: pagamento.Id,
             ContratoId: pagamento.ContratoId,
@@ -98,7 +111,6 @@ public class CreatePagamentoHandler
             DataRegistro: DateTime.UtcNow
         );
 
-        // Publish não aguarda a conclusão - fire-and-forget
         await _publisher.Publish(notification, cancellationToken);
 
         var response = new PagamentoResponseDto(
@@ -113,6 +125,9 @@ public class CreatePagamentoHandler
             pagamento.AmortizacaoPaga,
             pagamento.SaldoDevedorAposPaymento
         );
+
+        _logger.LogInformation("CreatePagamento finalizado com sucesso - CorrelationId: {CorrelationId}, PagamentoId: {PagamentoId}",
+            command.CorrelationId, pagamento.Id);
 
         return Result<PagamentoResponseDto>.Success(response, 201);
     }

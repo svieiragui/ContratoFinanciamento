@@ -1,4 +1,5 @@
-﻿using ContractsApi.Application.Features.Pagamentos.Create;
+﻿using ContractsApi.Api.Extensions;
+using ContractsApi.Application.Features.Pagamentos.Create;
 using ContractsApi.Application.Features.Pagamentos.GetByContrato;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,21 +31,24 @@ public class PagamentosController : ControllerBase
         [FromBody] CreatePagamentoRequest request,
         CancellationToken cancellationToken)
     {
+        var correlationId = this.GetOrGenerateCorrelationId();
+
         var command = new CreatePagamentoCommand(
             contratoId,
             request.NumeroParcela,
             request.ValorPago,
-            request.DataPagamento
+            request.DataPagamento,
+            correlationId
         );
 
         var result = await _createHandler.Handle(command, cancellationToken);
 
         if (!result.IsSuccess)
         {
-            return StatusCode(result.StatusCode, new { message = result.ErrorMessage });
+            return StatusCode(result.StatusCode, new { message = result.ErrorMessage, correlationId });
         }
 
-        return StatusCode(result.StatusCode, result.Data);
+        return StatusCode(result.StatusCode, new { data = result.Data, correlationId });
     }
 
     /// <summary>
@@ -53,16 +57,18 @@ public class PagamentosController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetByContrato(Guid contratoId, CancellationToken cancellationToken)
     {
+        var correlationId = this.GetOrGenerateCorrelationId();
+
         var result = await _getByContratoHandler.Handle(
-            new GetPagamentosByContratoQuery(contratoId),
+            new GetPagamentosByContratoQuery(contratoId, correlationId),
             cancellationToken);
 
         if (!result.IsSuccess)
         {
-            return StatusCode(result.StatusCode, new { message = result.ErrorMessage });
+            return StatusCode(result.StatusCode, new { message = result.ErrorMessage, correlationId });
         }
 
-        return Ok(result.Data);
+        return Ok(new { data = result.Data, correlationId });
     }
 }
 

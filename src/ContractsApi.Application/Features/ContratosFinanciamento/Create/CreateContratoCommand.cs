@@ -9,5 +9,6 @@ public record CreateContratoCommand(
     int PrazoMeses,
     DateTime DataVencimentoPrimeiraParcela,
     TipoVeiculo TipoVeiculo,
-    CondicaoVeiculo CondicaoVeiculo
+    CondicaoVeiculo CondicaoVeiculo,
+    string CorrelationId
 );

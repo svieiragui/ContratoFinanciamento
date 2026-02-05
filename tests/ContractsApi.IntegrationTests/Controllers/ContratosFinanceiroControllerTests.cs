@@ -25,7 +25,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         // Act
@@ -55,7 +56,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         // Act
@@ -76,7 +78,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         // Act
@@ -97,7 +100,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(-1), // Data no passado
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         // Act
@@ -133,7 +137,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         await Client.PostAsJsonAsync("/api/contratos", command);
@@ -161,7 +166,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
@@ -205,7 +211,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
@@ -244,7 +251,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
@@ -273,7 +281,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
             PrazoMeses: 48,
             DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
             TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO
+            CondicaoVeiculo: CondicaoVeiculo.NOVO,
+            CorrelationId: Guid.NewGuid().ToString()
         );
 
         // Act

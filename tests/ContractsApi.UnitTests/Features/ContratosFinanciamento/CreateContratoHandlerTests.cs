@@ -5,6 +5,7 @@ using ContractsApi.Domain.Repositories;
 using FluentAssertions;
 using FluentValidation;
 using Moq;
+using Microsoft.Extensions.Logging;
 
 namespace ContractsApi.UnitTests.Features.ContratosFinanciamento;
 
@@ -12,13 +13,15 @@ public class CreateContratoHandlerTests
 {
     private readonly Mock<IContratoFinanciamentoRepository> _repositoryMock;
     private readonly IValidator<CreateContratoCommand> _validator;
+    private readonly Mock<ILogger<CreateContratoHandler>> _loggerMock;
     private readonly CreateContratoHandler _handler;
 
     public CreateContratoHandlerTests()
     {
         _repositoryMock = new Mock<IContratoFinanciamentoRepository>();
         _validator = new CreateContratoValidator();
-        _handler = new CreateContratoHandler(_repositoryMock.Object, _validator);
+        _loggerMock = new Mock<ILogger<CreateContratoHandler>>();
+        _handler = new CreateContratoHandler(_repositoryMock.Object, _validator, _loggerMock.Object);
     }
 
     [Fact]
@@ -32,7 +35,8 @@ public class CreateContratoHandlerTests
             48,
             DateTime.Today.AddDays(30),
             TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo.NOVO
+            CondicaoVeiculo.NOVO,
+            Guid.NewGuid().ToString()
         );
 
         _repositoryMock.Setup(x => x.CreateAsync(It.IsAny<ContratoFinanciamento>(), It.IsAny<CancellationToken>()))
@@ -59,7 +63,8 @@ public class CreateContratoHandlerTests
             48,
             DateTime.Today.AddDays(30),
             TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo.NOVO
+            CondicaoVeiculo.NOVO,
+            Guid.NewGuid().ToString()
         );
 
         // Act
@@ -81,7 +86,8 @@ public class CreateContratoHandlerTests
             48,
             DateTime.Today.AddDays(30),
             TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo.NOVO
+            CondicaoVeiculo.NOVO,
+            Guid.NewGuid().ToString()
         );
 
         // Act
@@ -103,7 +109,8 @@ public class CreateContratoHandlerTests
             48,
             DateTime.Today.AddDays(-1), // Data no passado
             TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo.NOVO
+            CondicaoVeiculo.NOVO,
+            Guid.NewGuid().ToString()
         );
 
         // Act
