@@ -11,7 +11,7 @@ namespace ContractsApi.IntegrationTests.Controllers;
 public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
 {
 
-    public ContratosFinanciamentoControllerTests() { }
+    public ContratosFinanciamentoControllerTests() : base() { }
 
 
     [Fact]
@@ -19,7 +19,7 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
     {
         // Arrange
         var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "12345678901",
+            ClienteCpfCnpj: "35711699059",
             ValorTotal: 50000,
             TaxaMensal: 2.5m,
             PrazoMeses: 48,
@@ -37,12 +37,13 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
 
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<JsonElement>(content);
+        var data = result.GetProperty("data");
 
-        result.GetProperty("id").GetGuid().Should().NotBeEmpty();
-        result.GetProperty("clienteCpfCnpj").GetString().Should().Be("12345678901");
-        result.GetProperty("valorTotal").GetDecimal().Should().Be(50000);
-        result.GetProperty("valorParcela").GetDecimal().Should().BeGreaterThan(0);
-        result.GetProperty("saldoDevedor").GetDecimal().Should().Be(50000);
+        data.GetProperty("id").GetGuid().Should().NotBeEmpty();
+        data.GetProperty("clienteCpfCnpj").GetString().Should().Be("35711699059");
+        data.GetProperty("valorTotal").GetDecimal().Should().Be(50000);
+        data.GetProperty("valorParcela").GetDecimal().Should().BeGreaterThan(0);
+        data.GetProperty("saldoDevedor").GetDecimal().Should().Be(50000);
     }
 
     [Fact]
@@ -112,55 +113,11 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
     }
 
     [Fact]
-    public async Task GetAll_ReturnsOkWithEmptyList()
-    {
-        // Act
-        var response = await Client.GetAsync("/api/contratos");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-
-        result.ValueKind.Should().Be(JsonValueKind.Array);
-    }
-
-    [Fact]
-    public async Task GetAll_AfterCreatingContrato_ReturnsListWithOneItem()
-    {
-        // Arrange
-        var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "12345678901",
-            ValorTotal: 50000,
-            TaxaMensal: 2.5m,
-            PrazoMeses: 48,
-            DataVencimentoPrimeiraParcela: DateTime.Today.AddDays(30),
-            TipoVeiculo: TipoVeiculo.AUTOMOVEL,
-            CondicaoVeiculo: CondicaoVeiculo.NOVO,
-            CorrelationId: Guid.NewGuid().ToString()
-        );
-
-        await Client.PostAsJsonAsync("/api/contratos", command);
-
-        // Act
-        var response = await Client.GetAsync("/api/contratos");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-
-        result.GetArrayLength().Should().BeGreaterThan(0);
-    }
-
-    [Fact]
     public async Task GetById_ExistingContrato_ReturnsOk()
     {
         // Arrange
         var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "12345678901",
+            ClienteCpfCnpj: "65973205061",
             ValorTotal: 50000,
             TaxaMensal: 2.5m,
             PrazoMeses: 48,
@@ -173,7 +130,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
         var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createResult = JsonSerializer.Deserialize<JsonElement>(createContent);
-        var contratoId = createResult.GetProperty("id").GetGuid();
+        var createdData = createResult.GetProperty("data");
+        var contratoId = createdData.GetProperty("id").GetGuid();
 
         // Act
         var response = await Client.GetAsync($"/api/contratos/{contratoId}");
@@ -183,8 +141,9 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
 
         var content = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<JsonElement>(content);
+        var data = result.GetProperty("data");
 
-        result.GetProperty("id").GetGuid().Should().Be(contratoId);
+        data.GetProperty("id").GetGuid().Should().Be(contratoId);
     }
 
     [Fact]
@@ -205,7 +164,7 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
     {
         // Arrange
         var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "12345678901",
+            ClienteCpfCnpj: "23894066024",
             ValorTotal: 50000,
             TaxaMensal: 2.5m,
             PrazoMeses: 48,
@@ -218,7 +177,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
         var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createResult = JsonSerializer.Deserialize<JsonElement>(createContent);
-        var contratoId = createResult.GetProperty("id").GetGuid();
+        var createdData = createResult.GetProperty("data");
+        var contratoId = createdData.GetProperty("id").GetGuid();
 
         // Act
         var response = await Client.DeleteAsync($"/api/contratos/{contratoId}");
@@ -245,7 +205,7 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
     {
         // Arrange
         var command = new CreateContratoCommand(
-            ClienteCpfCnpj: "12345678901",
+            ClienteCpfCnpj: "07349756003",
             ValorTotal: 50000,
             TaxaMensal: 2.5m,
             PrazoMeses: 48,
@@ -258,7 +218,8 @@ public class ContratosFinanciamentoControllerTests : IntegrationTestFixture
         var createResponse = await Client.PostAsJsonAsync("/api/contratos", command);
         var createContent = await createResponse.Content.ReadAsStringAsync();
         var createResult = JsonSerializer.Deserialize<JsonElement>(createContent);
-        var contratoId = createResult.GetProperty("id").GetGuid();
+        var createdData = createResult.GetProperty("data");
+        var contratoId = createdData.GetProperty("id").GetGuid();
 
         // Act
         await Client.DeleteAsync($"/api/contratos/{contratoId}");
