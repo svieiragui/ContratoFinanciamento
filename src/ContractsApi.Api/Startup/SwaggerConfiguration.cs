@@ -41,11 +41,5 @@ namespace ContractsApi.Api.Startup
                 });
             });
         }
-
-        public static void UseSwagger(this WebApplication app)
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
     }
 }
